@@ -1,50 +1,52 @@
-# from fabric.api import env, put, run
-# from cuisine import *
-#
-# def strategy_git(name, config):
-#   print('deploying with git strategy')
-#   app_dir = '/www/apps/' + name
-#   dir_ensure(app_dir)
-#   dir_ensure(app_dir + '/releases')
-#   dir_ensure(app_dir + '/shared')
-#   releases = run('ls ' + app_dir + '/releases').split()
-#   release_number = (int(releases[-1]) if len(releases) else 0) + 1
-#
-#   # Limit release directories
-#   if config['max_releases'] is not None:
-#     max_releases = config['max_releases']
-#   else:
-#     max_releases = env.max_releases
-#
-#   if release_number > 0 and len(releases) > max_releases:
-#     for old in releases[:(len(releases) - max_releases)]:
-#       dir_remove(app_dir + '/releases/' + old)
-#
-#   dir_ensure(app_dir + '/releases/' + str(release_number))
-#   put(env.apps[name]['local_path'] + '/*', app_dir + '/releases/' + str(release_number))
-#   dir_ensure(app_dir + '/releases/' + str(release_number) + '/tmp')
-#   file_link(app_dir + '/releases/' + str(release_number), app_dir + '/current')
-#
-# def strategy_symlink(name, config):
-#   print('deploying symlink')
+""" ... """
 
+import os
+
+from cuisine import *
+from fabric.api import put, run
+from fabric.colors import yellow
 
 from texture.decorators import strategy
+from texture.state import env
 
 
 @strategy
-def git():
+def git(name, config):
   """ ... """
-  print('this is git 1')
+  defaults = {'branch': 'master'}
 
 
 @strategy
-def rsync():
-  """ ... """
-  pass
+def copy(name, config):
+  """
+  Copy the application directory up to the servers directly without any VCS.
+  """
+
+  app_dir = os.path.join(config['remote_path'], name)
+  dir_ensure(os.path.join(app_dir, 'releases'), recursive=True)
+  dir_ensure(os.path.join(app_dir, 'shared'), recursive=True)
+
+  # get current release info
+  releases = map(int, run('ls ' + os.path.join(app_dir, 'releases')).split())
+  releases.sort()
+
+  current_release = (releases[-1] if len(releases) else 0)
+  next_release = current_release + 1
+
+  # deploy new release
+  next_release_dir = os.path.join(app_dir, 'releases', str(next_release))
+  dir_ensure(next_release_dir)
+  put(os.path.join(config['local_path'], '*'), next_release_dir)
+  dir_ensure(os.path.join(next_release_dir, 'tmp'))
+  file_link(next_release_dir, os.path.join(app_dir, 'current'))
+
+  # delete extra releases
+  if current_release > 0 and (len(releases) + 1) > env.max_releases:
+    for old in releases[:(len(releases) - env.max_releases + 1)]:
+      dir_remove(os.path.join(app_dir, 'releases', str(old)))
 
 
 @strategy
-def symlink():
+def symlink(name, config):
   """ ... """
   pass

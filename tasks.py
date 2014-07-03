@@ -2,6 +2,7 @@
 Top-level tasks to be used within a Fabfile.
 """
 
+import os
 import sys
 
 from cuisine import *
@@ -29,7 +30,7 @@ def setup():
     abort("You MUST specify a role to setup.")
 
   if len(env.roles) != len(env.roleconfig):
-    abort("The specified roles MUST exist in env.roleconfig.")
+    abort("The specified roles MUST exist in env.role_config.")
 
   for role in env.roles:
     print(yellow('Running setup for: ' + role))
@@ -44,16 +45,24 @@ def setup():
         execute(task(setup_task))
 
 
-# @task
-# @parallel(pool_size=5)
-# def deploy():
-#   """ ... """
-#
-#   env.user = env.deployment_user
-#   app_config = env.apps[app]
-#
-#   print(yellow('Deploying application: ' + app))
-#   execute(task(env.strategies[app_config['strategy']]), app, app_config);
+@task
+@parallel(pool_size=5)
+def deploy(app):
+  """ ... """
+
+  env.user = env.deploy_user
+
+  if app not in env.app_config:
+    abort("The specified app MUST exist in env.app_config.")
+
+  # merge custom config over defaults
+  app_config = env.app_defaults.copy()
+  app_config.update(env.app_config[app])
+
+  # execute the strategy
+  strategy = env.strategies[app_config['strategy']]
+  execute(task(strategy), app, app_config)
+
 #
 #
 # @task

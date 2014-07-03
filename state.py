@@ -70,7 +70,7 @@ env.role_defaults = {
 current_file = inspect.getfile(inspect.currentframe())
 current_dir = os.path.dirname(os.path.abspath(current_file))
 
-env.apps = {
+env.app_config = {
 
   # Example Apps
   # ============
@@ -78,22 +78,10 @@ env.apps = {
   # Apps that demonstrate the capabilities of the web server and help to verify
   # that the required funtionality exists.
 
-  'nodeexample': {
-    'local_path': current_dir + '/examples/nodeexample',
-    'max_releases': 1
-  },
-  'phpexample': {
-    'local_path': current_dir + '/examples/phpexample',
-    'max_releases': 1
-  },
-  'pythonexample': {
-    'local_path': current_dir + '/examples/pythonexample',
-    'max_releases': 1
-  },
-  'rackexample': {
-    'local_path': current_dir + '/examples/rackexample',
-    'max_releases': 1
-  }
+  'nodeexample':   {'local_path': current_dir + '/examples/nodeexample'},
+  'phpexample':    {'local_path': current_dir + '/examples/phpexample'},
+  'pythonexample': {'local_path': current_dir + '/examples/pythonexample'},
+  'rackexample':   {'local_path': current_dir + '/examples/rackexample'}
 }
 
 
@@ -105,12 +93,11 @@ env.apps = {
 # app defs.
 #
 
-APP_DEFAULTS = {
+env.app_defaults = {
   'local_path': None,
+  'remote_path': '/www/apps',
   'shared_dirs': [],
-  'max_releases': None,
-  'strategy': 'git',
-  'branch': 'master'
+  'strategy': 'copy'
 }
 
 

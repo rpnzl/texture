@@ -29,7 +29,7 @@ def setup():
   if not env.roles:
     abort("You MUST specify a role to setup.")
 
-  if len(env.roles) != len(env.roleconfig):
+  if len(env.roles) != len(env.role_config):
     abort("The specified roles MUST exist in env.role_config.")
 
   for role in env.roles:
@@ -51,17 +51,22 @@ def deploy(app):
   """ ... """
 
   env.user = env.deploy_user
-
+  print(env.strategies)
   if app not in env.app_config:
     abort("The specified app MUST exist in env.app_config.")
 
-  # merge custom config over defaults
-  app_config = env.app_defaults.copy()
-  app_config.update(env.app_config[app])
+  if env.strategy not in env.strategies:
+    abort("Strategy [" + env.strategy + "] is not valid!")
 
-  # execute the strategy
-  strategy = env.strategies[app_config['strategy']]
-  execute(task(strategy), app, app_config)
+  strategy = env.strategies[env.strategy]
+  config = {}
+  config.update(env.app_defaults)
+  config.update(strategy['defaults'])
+  config.update(env.app_config[app])
+
+  print(env.role)
+
+  # execute(task(strategy), config)
 
 #
 #
@@ -111,6 +116,7 @@ def install_pgps(items):
       pgp['key']
     ]))
 
+
 def install_sources(items):
   """ ... """
   if not items:
@@ -122,6 +128,7 @@ def install_sources(items):
     for line in source['lines']:
       contrib.files.append(source['path'], line, use_sudo=True)
 
+
 def install_ppas(items):
   """ ... """
   if not items:
@@ -130,6 +137,7 @@ def install_ppas(items):
   print(yellow("Adding PPAs."))
   for ppa in items:
     repository_ensure_apt(ppa)
+
 
 def install_pkgs(items):
   """ ... """

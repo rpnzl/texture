@@ -49,6 +49,7 @@ env.role_config = {}
 #
 
 env.role_defaults = {
+  'app_path': '/www/apps',
   'pgps': [],
   'sources': [],
   'ppas': [],
@@ -93,12 +94,7 @@ env.app_config = {
 # app defs.
 #
 
-env.app_defaults = {
-  'local_path': None,
-  'remote_path': '/www/apps',
-  'shared_dirs': [],
-  'strategy': 'copy'
-}
+env.app_defaults = {}
 
 
 #
@@ -109,3 +105,13 @@ env.app_defaults = {
 #
 
 env.strategies = {}
+
+
+#
+# Strategy
+# ========
+#
+# Default strategy to use when one isn't set in an app config.
+#
+
+env.strategy = 'copy'

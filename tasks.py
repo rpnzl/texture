@@ -4,10 +4,11 @@ Top-level tasks to be used within a Fabfile.
 
 import os
 import sys
+import StringIO
 
 from cuisine import *
 from fabric import contrib
-from fabric.api import abort, execute, parallel, put, run, task
+from fabric.api import abort, execute, get, parallel, put, run, task
 from fabric.colors import yellow
 
 from texture.state import env
@@ -41,6 +42,7 @@ def setup():
       execute(task(install_sources), role_config['sources'])
       execute(task(install_ppas), role_config['ppas'])
       execute(task(install_pkgs), role_config['pkgs'])
+      execute(task(setup_deploy_user))
       for setup_task in role_config['tasks']:
         execute(task(setup_task))
 
@@ -51,22 +53,23 @@ def deploy(app):
   """ ... """
 
   env.user = env.deploy_user
-  print(env.strategies)
+
   if app not in env.app_config:
     abort("The specified app MUST exist in env.app_config.")
+
+  if 'local_path' not in env.app_config[app]:
+    abort("The specified app MUST have a 'local_path' defined!")
 
   if env.strategy not in env.strategies:
     abort("Strategy [" + env.strategy + "] is not valid!")
 
   strategy = env.strategies[env.strategy]
-  config = {}
+  config = {'name': app}
   config.update(env.app_defaults)
   config.update(strategy['defaults'])
   config.update(env.app_config[app])
 
-  print(env.role)
-
-  # execute(task(strategy), config)
+  execute(task(strategy['function']), config)
 
 #
 #
@@ -148,3 +151,17 @@ def install_pkgs(items):
   package_update()
   package_upgrade()
   package_ensure(' '.join(items))
+
+
+def setup_deploy_user():
+  home_dir = '~' + env.deploy_user
+  user_ensure(env.deploy_user, shell='/bin/bash')
+  dir_ensure(home_dir + '/.ssh', mode='0700',
+    owner=env.deploy_user, group=env.deploy_user)
+  file_ensure(home_dir + '/.ssh/authorized_keys', mode='0600',
+    owner=env.deploy_user, group=env.deploy_user)
+
+  # Transfer SSH key
+  f = StringIO.StringIO()
+  get('~/.ssh/authorized_keys', f)
+  contrib.files.append(home_dir + '/.ssh/authorized_keys', f.getvalue(), use_sudo=True)

@@ -49,7 +49,6 @@ env.role_config = {}
 #
 
 env.role_defaults = {
-  'app_path': '/www/apps',
   'pgps': [],
   'sources': [],
   'ppas': [],

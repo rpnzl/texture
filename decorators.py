@@ -3,23 +3,19 @@
 from texture.state import env
 
 
-# def strategy(callable):
-#   """
-#   Defines deployment strategies on the env variable for use in the deploy
-#   task.
-#   """
-#   env.strategies[callable.__name__] = callable
-#   return callable
-
-def strategy(defaults={}):
+def strategy(defaults):
   """
   Defines deployment strategies on the env variable for use in the deploy
   task.
   """
-  def Strategy(callable):
-    env.strategies[callable.__name__] = {
+  def Strategy(method):
+    env.strategies[method.__name__] = {
       'defaults': defaults,
-      'function': callable
+      'function': method
     }
-    return callable
+    return method
+  if callable(defaults):
+    method = defaults
+    defaults = {}
+    return Strategy(method)
   return Strategy

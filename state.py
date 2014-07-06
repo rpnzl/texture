@@ -58,6 +58,15 @@ env.role_defaults = {
 
 
 #
+# Remote Base Dir
+# ===============
+#
+#
+
+env.remote_base_dir = '~'
+
+
+#
 # Application Definitions
 # =======================
 #
@@ -114,3 +123,13 @@ env.strategies = {}
 #
 
 env.strategy = 'copy'
+
+
+#
+# Texture Tasks
+# =============
+#
+#
+#
+
+env.texture_tasks = {}

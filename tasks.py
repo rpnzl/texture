@@ -8,7 +8,7 @@ import StringIO
 
 from cuisine import *
 from fabric import contrib
-from fabric.api import abort, execute, get, parallel, put, run, task
+from fabric.api import abort, execute, get, parallel, put, run, sudo, task
 from fabric.colors import yellow
 
 from texture.state import env
@@ -38,13 +38,17 @@ def setup():
     role_config = env.role_defaults.copy()
     role_config.update(env.role_config[role])
     with mode_sudo():
+      # ensure hostname exists in hosts due to AWS inconsistency
+      host_string = '127.0.1.1 ' + sudo('hostname').split('\r\n').pop()
+      contrib.files.append('/etc/hosts', host_string, use_sudo=True)
+      # normal setup routines
       execute(task(install_pgps), role_config['pgps'])
       execute(task(install_sources), role_config['sources'])
       execute(task(install_ppas), role_config['ppas'])
       execute(task(install_pkgs), role_config['pkgs'])
       execute(task(setup_deploy_user))
       for setup_task in role_config['tasks']:
-        execute(task(setup_task))
+        execute(task(env.texture_tasks[setup_task]))
 
 
 @task
@@ -57,13 +61,15 @@ def deploy(app):
   if app not in env.app_config:
     abort("The specified app MUST exist in env.app_config.")
 
-  if 'local_path' not in env.app_config[app]:
-    abort("The specified app MUST have a 'local_path' defined!")
+  if 'strategy' in env.app_config[app]:
+    strategy_name = env.app_config[app]['strategy']
+  else:
+    strategy_name = env.strategy
 
-  if env.strategy not in env.strategies:
-    abort("Strategy [" + env.strategy + "] is not valid!")
+  if strategy_name not in env.strategies:
+    abort("Strategy [" + strategy_name + "] is not valid!")
 
-  strategy = env.strategies[env.strategy]
+  strategy = env.strategies[strategy_name]
   config = {'name': app}
   config.update(env.app_defaults)
   config.update(strategy['defaults'])
@@ -71,38 +77,18 @@ def deploy(app):
 
   execute(task(strategy['function']), config)
 
-#
-#
-# @task
-# @parallel(pool_size=5)
-# def deploy_examples():
-#   """
-#   This task deploys the various example apps to the listed web servers - these
-#   apps include NodeJS, Rack, WSGI, and PHP samples to help ensure all app types
-#   are working as expected.
-#   """
-#
-#   env.user = env.deployment_user
-#
-#   for app in EXAMPLE_APPS:
-#     execute('deploy', role, app)
-#
-# @task
-# @parallel(pool_size=5)
-# def deploy_symbolic_app(sym, app):
-#   env.user = 'deploy'
-#   if file_exists('/www/apps/' + app):
-#     file_link('/www/apps/' + app, '/www/apps/' + sym)
-#     run('touch /www/apps/' + sym + '/current/tmp/restart.txt')
-#
-#   env.user = 'ubuntu'
-#   with mode_sudo():
-#     run('service nginx reload')
 
-
-
-
-
+@task
+@parallel(pool_size=5)
+def deploy_examples():
+  """
+  This task deploys the various example apps to the listed web servers - these
+  apps include NodeJS, Rack, WSGI, and PHP samples to help ensure all app types
+  are working as expected.
+  """
+  examples = os.listdir(os.path.join(os.path.dirname(__file__), 'examples'))
+  for app in [x for x in examples if x in env.app_config]:
+    execute('deploy', app)
 
 
 def install_pgps(items):
@@ -112,7 +98,7 @@ def install_pgps(items):
     return
   print(yellow("Installing PGPs."))
   for pgp in items:
-    run(" ".join([
+    sudo(" ".join([
       "apt-key adv --keyserver",
       pgp['server'],
       "--recv-keys",

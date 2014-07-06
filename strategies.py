@@ -10,23 +10,18 @@ from texture.decorators import strategy
 from texture.state import env
 
 
-@strategy({
-  'branch': 'master',
-  'remote_base_path': '~'
-})
+@strategy({'branch': 'master'})
 def git(config):
   """ ... """
   print('GIT DEPLOY:', config)
 
 
-@strategy({
-  'remote_base_path': '~'
-})
+@strategy
 def copy(config):
   """
   Copy the application directory up to the servers directly without any VCS.
   """
-  config['remote_path'] = os.path.join(config['remote_base_path'], config['name'])
+  config['remote_path'] = os.path.join(env.remote_base_dir, config['name'])
   config['release_path'] = os.path.join(config['remote_path'], 'releases')
   config['shared_path'] = os.path.join(config['remote_path'], 'shared')
 
@@ -51,7 +46,10 @@ def copy(config):
       dir_remove(os.path.join(config['release_path'], str(old_release)))
 
 
-@strategy
+@strategy({'target': None})
 def symlink(config):
   """ ... """
-  print('SYM DEPLOY:', config)
+  if not config['target']:
+    print(red('A target MUST be defined!'))
+  file_link(config['target'], os.path.join(env.remote_base_dir, config['name']))
+  

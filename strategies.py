@@ -23,7 +23,6 @@ def copy(app_name):
   """
   Copy the application directory up to the servers directly without any VCS.
   """
-  return
   config['remote_path'] = os.path.join(REMOTE_BASE_DIR, config['name'])
   config['release_path'] = os.path.join(config['remote_path'], 'releases')
   config['shared_path'] = os.path.join(config['remote_path'], 'shared')

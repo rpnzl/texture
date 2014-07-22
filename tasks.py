@@ -8,9 +8,10 @@ import StringIO
 
 from cuisine import *
 from fabric import contrib
-from fabric.api import abort, execute, get, parallel, put, run, sudo, task
+from fabric.api import abort, execute, get, put, run, sudo, task as fabric_task
 from fabric.colors import yellow
 
+from texture.decorators import subtask, task
 from texture.state import env
 
 
@@ -23,76 +24,41 @@ def setup():
   for more info...
 
   https://github.com/fabric/fabric/issues/361
+
+  # ensure hostname exists in hosts due to AWS inconsistency
+  # host_string = '127.0.1.1 ' + sudo('hostname').split('\r\n').pop()
+  # contrib.files.append('/etc/hosts', host_string, use_sudo=True)
   """
-
   env.user = env.admin_user
-
-  if not env.roles:
-    abort("You MUST specify a role to setup.")
-
-  if len(env.roles) != len(env.role_config):
-    abort("The specified roles MUST exist in env.role_config.")
-
   for role in env.roles:
-    print(yellow('Running setup for: ' + role))
-    role_config = env.role_defaults.copy()
-    role_config.update(env.role_config[role])
     with mode_sudo():
-      # ensure hostname exists in hosts due to AWS inconsistency
-      host_string = '127.0.1.1 ' + sudo('hostname').split('\r\n').pop()
-      contrib.files.append('/etc/hosts', host_string, use_sudo=True)
-      # normal setup routines
-      execute(task(install_pgps), role_config['pgps'])
-      execute(task(install_sources), role_config['sources'])
-      execute(task(install_ppas), role_config['ppas'])
-      execute(task(install_pkgs), role_config['pkgs'])
-      execute(task(setup_deploy_user))
-      for setup_task in role_config['tasks']:
-        execute(task(env.texture_tasks[setup_task]))
+      defaults = ['install_pgps',
+                  'install_sources',
+                  'install_ppas',
+                  'install_pkgs',
+                  'setup_deploy_user']
+      for subtask in defaults:
+        execute(fabric_task(env.subtasks[subtask]), env.role_config[role])
+      for subtask in env.role_config[role]['subtasks']['setup']:
+        execute(fabric_task(env.subtasks[subtask]), env.role_config[role])
 
 
 @task
-@parallel(pool_size=5)
 def deploy(app):
   """ ... """
-
   env.user = env.deploy_user
-
-  if app not in env.app_config:
-    abort("The specified app MUST exist in env.app_config.")
-
   if 'strategy' in env.app_config[app]:
     strategy_name = env.app_config[app]['strategy']
   else:
     strategy_name = env.strategy
-
-  if strategy_name not in env.strategies:
-    abort("Strategy [" + strategy_name + "] is not valid!")
-
   strategy = env.strategies[strategy_name]
-  config = {'name': app}
-  config.update(env.app_defaults)
-  config.update(strategy['defaults'])
-  config.update(env.app_config[app])
-
-  execute(task(strategy['function']), config)
+  execute(fabric_task(strategy['function']), app)
 
 
-@task
-@parallel(pool_size=5)
-def deploy_examples():
-  """
-  This task deploys the various example apps to the listed web servers - these
-  apps include NodeJS, Rack, WSGI, and PHP samples to help ensure all app types
-  are working as expected.
-  """
-  examples = os.listdir(os.path.join(os.path.dirname(__file__), 'examples'))
-  for app in [x for x in examples if x in env.app_config]:
-    execute('deploy', app)
-
-
-def install_pgps(items):
+@subtask
+def install_pgps(config):
   """ ... """
+  items = config['pgps']
   if not items:
     print(yellow("No PGPs specified."))
     return
@@ -106,8 +72,10 @@ def install_pgps(items):
     ]))
 
 
-def install_sources(items):
+@subtask
+def install_sources(config):
   """ ... """
+  items = config['sources']
   if not items:
     print(yellow("No sources specified."))
     return
@@ -118,8 +86,10 @@ def install_sources(items):
       contrib.files.append(source['path'], line, use_sudo=True)
 
 
-def install_ppas(items):
+@subtask
+def install_ppas(config):
   """ ... """
+  items = config['ppas']
   if not items:
     print(yellow("No PPAs specified."))
     return
@@ -128,8 +98,10 @@ def install_ppas(items):
     repository_ensure_apt(ppa)
 
 
-def install_pkgs(items):
+@subtask
+def install_pkgs(config):
   """ ... """
+  items = config['pkgs']
   if not items:
     print(yellow("No packages specified."))
     return
@@ -139,7 +111,8 @@ def install_pkgs(items):
   package_ensure(' '.join(items))
 
 
-def setup_deploy_user():
+@subtask
+def setup_deploy_user(config):
   home_dir = '~' + env.deploy_user
   user_ensure(env.deploy_user, shell='/bin/bash')
   dir_ensure(home_dir + '/.ssh', mode='0700',

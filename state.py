@@ -53,17 +53,8 @@ env.role_defaults = {
   'sources': [],
   'ppas': [],
   'pkgs': [],
-  'tasks': []
+  'subtasks': { 'setup': [], 'deploy': [] }
 }
-
-
-#
-# Remote Base Dir
-# ===============
-#
-#
-
-env.remote_base_dir = '~'
 
 
 #
@@ -76,17 +67,18 @@ env.remote_base_dir = '~'
 # (and desired) functionality exists.
 #
 
+env.app_config = {}
+
+
+# Example Apps
+# ============
+#
+# Apps that demonstrate the capabilities of the web server and help to verify
+# that the required funtionality exists.
+
 current_file = inspect.getfile(inspect.currentframe())
 current_dir = os.path.dirname(os.path.abspath(current_file))
-
-env.app_config = {
-
-  # Example Apps
-  # ============
-  #
-  # Apps that demonstrate the capabilities of the web server and help to verify
-  # that the required funtionality exists.
-
+EXAMPLE_APPS = {
   'nodeexample':   {'local_path': current_dir + '/examples/nodeexample'},
   'phpexample':    {'local_path': current_dir + '/examples/phpexample'},
   'pythonexample': {'local_path': current_dir + '/examples/pythonexample'},
@@ -126,10 +118,10 @@ env.strategy = 'copy'
 
 
 #
-# Texture Tasks
-# =============
+# Subtasks
+# ========
 #
 #
 #
 
-env.texture_tasks = {}
+env.subtasks = {}
